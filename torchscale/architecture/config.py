@@ -1,7 +1,7 @@
 # Copyright (c) 2022 Microsoft
 # Licensed under The MIT License [see LICENSE for details]
 
-
+from dataclasses import dataclass, field
 class EncoderConfig(object):
     def __init__(self, **kwargs):
         self.encoder_embed_dim = kwargs.pop("encoder_embed_dim", 768)
@@ -256,6 +256,7 @@ class RetNetConfig(object):
         self.ddp_rank = kwargs.pop("ddp_rank", 0)
         self.xpos_rel_pos = kwargs.pop("xpos_rel_pos", False)
         self.xpos_scale_base = kwargs.pop("xpos_scale_base", 512)
+        self.random_permute_times  = kwargs.pop("random_permute_times", None)
 
         if self.deepnorm:
             self.decoder_normalize_before = False
@@ -272,3 +273,62 @@ class RetNetConfig(object):
         for hp in self.__dict__.keys():
             if getattr(args, hp, None) is not None:
                 self.__dict__[hp] = getattr(args, hp, None)
+
+
+@dataclass
+class RetNetConfigDataclass(object):
+    decoder_embed_dim: int = field(default=768)
+    decoder_retention_heads: int = field(default=3)
+    decoder_ffn_embed_dim: int = field(default=1536)
+    decoder_layers: int = field(default=12)
+    decoder_normalize_before: bool = field(default=True)
+    activation_fn: str = field(default="gelu")
+    dropout: float = field(default=0.0)
+    drop_path_rate: float = field(default=0.0)
+    activation_dropout: float = field(default=0.0)
+    no_scale_embedding: bool = field(default=True)
+    layernorm_embedding: bool = field(default=False)
+    moe_freq: int = field(default=0)
+    moe_top1_expert: bool = field(default=False)
+    moe_expert_count: int = field(default=0)
+    moe_gating_use_fp32: bool = field(default=True)
+    moe_eval_capacity_token_fraction: float = field(default=0.25)
+    moe_second_expert_policy: str = field(default="random")
+    moe_normalize_gate_prob_before_dropping: bool = field(default=False)
+    use_xmoe: bool = field(default=False)
+    rel_pos_buckets: int = field(default=0)
+    max_rel_pos: int = field(default=0)
+    deepnorm: bool = field(default=False)
+    subln: bool = field(default=True)
+    multiway: bool = field(default=False)
+    share_decoder_input_output_embed: bool = field(default=False)
+    max_target_positions: int = field(default=1024)
+    no_output_layer: bool = field(default=False)
+    layernorm_eps: float = field(default=1e-5)
+    chunkwise_recurrent: bool = field(default=False)
+    recurrent_chunk_size: int = field(default=512)
+    vocab_size: int = field(default=-1)
+    checkpoint_activations: bool = field(default=False)
+    fsdp: bool = field(default=False)
+    ddp_rank: int = field(default=0)
+    xpos_rel_pos: bool = field(default=False)
+    xpos_scale_base: int = field(default=512)
+    random_permute_times: int = field(default=None)
+
+    def __post_init__(self):
+        if self.deepnorm:
+            self.decoder_normalize_before = False
+            self.subln = False
+        if self.subln:
+            self.decoder_normalize_before = True
+            self.deepnorm = False
+        if self.use_xmoe:
+            self.moe_normalize_gate_prob_before_dropping = True
+            self.moe_second_expert_policy = "random"
+            assert self.moe_freq > 0 and self.moe_expert_count > 0
+
+    def override(self, args):
+        for hp in self.__dict__.keys():
+            if getattr(args, hp, None) is not None:
+                self.__dict__[hp] = getattr(args, hp, None)
+

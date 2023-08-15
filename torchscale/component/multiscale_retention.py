@@ -29,8 +29,7 @@ def duplicate_interleave(m):
     m = m.view(dim0, -1)  # reshape into a matrix, interleaving the copy
     return m
 
-def theta_shift(x, sin, cos):
-    return (x * cos) + (rotate_every_two(x) * sin)
+
 
 def get_activation_fn(activation):
     if activation == "swish":
@@ -54,10 +53,10 @@ class MultiScaleRetention(nn.Module):
         self.factor = value_factor
         self.embed_dim = embed_dim
         self.num_heads = num_heads
-        self.head_dim = self.embed_dim * self.factor // num_heads
+        self.head_dim = self.embed_dim * self.factor // num_heads  # 一般value 维度会乘2
         self.key_dim = self.embed_dim // num_heads
         self.scaling = self.key_dim ** -0.5
-        
+
         self.gate_fn = get_activation_fn(activation=str(gate_fn))
 
         self.q_proj = MultiwayWrapper(args, nn.Linear(embed_dim, embed_dim, bias=True))
@@ -68,7 +67,44 @@ class MultiScaleRetention(nn.Module):
         self.out_proj = MultiwayWrapper(args, nn.Linear(embed_dim * self.factor, embed_dim, bias=True))
 
         self.group_norm = MultiwayWrapper(args, LayerNorm(self.head_dim, eps=1e-6, elementwise_affine=False))
+
+        self.random_permute_times = args.random_permute_times if hasattr(args, "random_permute_times") and (args.random_permute_times is not None) and args.random_permute_times > 0 else None
+        if self.random_permute_times is not None:
+            self.f_theta_shift = self.theta_shift2
+            # 初始化每个head的随机排列索引
+            self.permute_indices = torch.stack([torch.stack([torch.randperm(self.key_dim) for _ in range(num_heads)]) for _ in range(self.random_permute_times)])
+        elif self.random_permute_times == -1:
+            self.f_theta_shift = self.theta_orthogonal
+            Z_shape = (num_heads,self.key_dim,self.key_dim)
+            Z = torch.randn(size=Z_shape)
+            U, S, Vh = torch.linalg.svd(Z)
+            W = U @ torch.transpose(Vh, 1, 2)
+            self.register_buffer("W", W)
+        else:
+            self.f_theta_shift = self.theta_shift
+            
+
+        
         self.reset_parameters()
+
+
+    def theta_shift(self, x, sin, cos):
+        return (x * cos) + (rotate_every_two(x) * sin)
+
+    def theta_shift2(self, x, sin, cos):
+        bsz, num_heads, tgt_len, key_dim = x.size()
+        expanded_permute_indices = self.permute_indices.unsqueeze(1).unsqueeze(3).expand(-1, bsz, -1, tgt_len, -1)
+        if expanded_permute_indices.device != x.device:
+            expanded_permute_indices = expanded_permute_indices.to(x.device)
+        for i in range(self.random_permute_times):
+            x = (x * cos) + (rotate_every_two(x) * sin)
+            x = torch.gather(x,-1,expanded_permute_indices[i])
+        return x
+    
+    def theta_orthogonal(self,x, sin, cos):
+        result = torch.einsum('bhtd, hdk -> bhtk', x, self.W)
+        return result
+
 
     def reset_parameters(self):
         nn.init.xavier_uniform_(self.q_proj.weight, gain=2 ** -2.5)
@@ -184,8 +220,8 @@ class MultiScaleRetention(nn.Module):
         q = q.view(bsz, tgt_len, self.num_heads, self.key_dim).transpose(1, 2)
         k = k.view(bsz, tgt_len, self.num_heads, self.key_dim).transpose(1, 2)
 
-        qr = theta_shift(q, sin, cos)
-        kr = theta_shift(k, sin, cos)
+        qr = self.f_theta_shift(q, sin, cos)
+        kr = self.f_theta_shift(k, sin, cos)
 
         if incremental_state is not None:
             output = self.recurrent_forward(qr, kr, v, inner_mask, incremental_state)

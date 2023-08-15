@@ -27,7 +27,7 @@ class RetNetRelPos(nn.Module):
         angle = 1.0 / (10000 ** torch.linspace(0, 1, args.decoder_embed_dim // args.decoder_retention_heads // 2))
         angle = angle.unsqueeze(-1).repeat(1, 2).flatten()
         decay = torch.log(1 - 2 ** (-5 - torch.arange(args.decoder_retention_heads, dtype=torch.float)))
-        self.register_buffer("angle", angle)
+        self.register_buffer("angle", angle)  # 无梯度，但是仍旧会参与反向传播
         self.register_buffer("decay", decay)
         self.recurrent_chunk_size = args.recurrent_chunk_size
         
@@ -200,7 +200,7 @@ class RetNetDecoder(nn.Module):
     def __init__(
         self,
         args,
-        embed_tokens=None,
+        embed_tokens=None,  # 输入的映射层，是Linear
         output_projection=None,
         **kwargs
     ):
@@ -215,7 +215,7 @@ class RetNetDecoder(nn.Module):
 
         self.embed_tokens = embed_tokens
 
-        if (
+        if (   # 这里是没有给output的话就会给一个输出到vocab的映射层
             output_projection is None
             and not args.no_output_layer
             and args.vocab_size > 0
@@ -325,7 +325,7 @@ class RetNetDecoder(nn.Module):
         x = embed = self.embed_scale * token_embedding
 
         if self.layernorm_embedding is not None:
-            x = self.layernorm_embedding(x)
+            x = self.layernorm_embedding(x)   
 
         x = self.dropout_module(x)
 
@@ -338,7 +338,7 @@ class RetNetDecoder(nn.Module):
 
     def forward(
         self,
-        prev_output_tokens,
+        prev_output_tokens,  # 这个tokens就是 最开始的tokens 这里是一个完整的GPT的实现
         incremental_state=None,
         features_only=False,
         return_all_hiddens=False,
