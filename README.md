@@ -69,6 +69,20 @@ We also support the `Decoder` architecture and the `EncoderDecoder` architecture
 >>> print(encdec)
 ```
 
+It takes only several lines of code to create a RetNet model:
+
+```python
+# Creating a RetNet model
+>>> import torch
+>>> from torchscale.architecture.config import RetNetConfig
+>>> from torchscale.architecture.retnet import RetNetDecoder
+
+>>> config = RetNetConfig(vocab_size=64000)
+>>> retnet = RetNetDecoder(config)
+
+>>> print(retnet)
+```
+
 ## Key Features
 
 - [DeepNorm to improve the training stability of Post-LayerNorm Transformers](https://arxiv.org/abs/2203.00555)
@@ -97,6 +111,9 @@ We also support the `Decoder` architecture and the `EncoderDecoder` architecture
 - [SparseClip: improving the gradient clipping for sparse MoE models](https://arxiv.org/abs/2211.13184)
   * we provide a [sample code](examples/fairseq/utils/sparse_clip.py) that can be easily adapted to the FairSeq (or other) repo.
 
+- [Retentive Network: A Successor to Transformer for Large Language Models](https://arxiv.org/abs/2307.08621)
+  * created by `config = RetNetConfig(vocab_size=64000)` and `retnet = RetNetDecoder(config)`.
+
 Most of the features above can be used by simply passing the corresponding parameters to the config. For example:
 
 ```python
@@ -111,7 +128,7 @@ Most of the features above can be used by simply passing the corresponding param
 
 ## Examples
 
-We have the examples of how to use TorchScale in the following scenarios/tasks:
+We have examples of how to use TorchScale in the following scenarios/tasks:
 
 - Language
 
@@ -138,7 +155,7 @@ We plan to provide more examples regarding different tasks (e.g. vision pretrain
 ### Stability Evaluation
 
 <p align="center">
-  <img src="https://publicmodel.blob.core.windows.net/torchscale/pic/convergence.png" width="800"/>
+  <img src="https://publicmodel.blob.core.windows.net/torchscale/pic/convergence.png?sv=2020-04-08&st=2023-08-11T03%3A09%3A09Z&se=2053-08-12T03%3A09%3A00Z&sr=c&sp=rl&sig=3b6nDda%2Fu0vD6E%2BhoTO%2BHfNSnSlUfgvXFV%2FCNKquWjE%3D" width="800"/>
 </p>
 
 The training curve is smooth by using TorchScale, while the baseline Transformer cannot converge.
@@ -146,7 +163,7 @@ The training curve is smooth by using TorchScale, while the baseline Transformer
 ### Scaling-up Experiments
 
 <p align="center">
-  <img src="https://publicmodel.blob.core.windows.net/torchscale/pic/scaling_curve.png" width="800"/>
+  <img src="https://publicmodel.blob.core.windows.net/torchscale/pic/scaling_curve.png?sv=2020-04-08&st=2023-08-11T03%3A09%3A09Z&se=2053-08-12T03%3A09%3A00Z&sr=c&sp=rl&sig=3b6nDda%2Fu0vD6E%2BhoTO%2BHfNSnSlUfgvXFV%2FCNKquWjE%3D" width="800"/>
 </p>
 
 TorchScale supports arbitrary depths and widths, successfully scaling-up the models without pain.
@@ -199,6 +216,16 @@ If you find this repository useful, please consider citing our work:
 }
 ```
 
+```
+@article{retnet,
+  author={Yutao Sun and Li Dong and Shaohan Huang and Shuming Ma and Yuqing Xia and Jilong Xue and Jianyong Wang and Furu Wei},
+  title     = {Retentive Network: A Successor to {Transformer} for Large Language Models},
+  journal   = {ArXiv},
+  volume    = {abs/2307.08621},
+  year      = {2023}
+}
+```
+
 ## Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
@@ -210,13 +237,11 @@ a CLA and decorate the PR appropriately (e.g., status check, comment). Simply fo
 provided by the bot. You will only need to do this once across all repos using our CLA.
 
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
+For more information, see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
 contact [Furu Wei](mailto:fuwei@microsoft.com) and [Shuming Ma](mailto:shumma@microsoft.com) with any additional questions or comments.
 
 ## Trademarks
 
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft 
-trademarks or logos is subject to and must follow 
-[Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
+This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft trademarks or logos is subject to and must follow [Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
 Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
-Any use of third-party trademarks or logos are subject to those third-party's policies.
+Any use of third-party trademarks or logos is subject to those third-party's policies.
